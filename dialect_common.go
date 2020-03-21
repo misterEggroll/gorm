@@ -111,6 +111,11 @@ func (s commonDialect) RemoveIndex(tableName string, indexName string) error {
 	return err
 }
 
+func (s commonDialect) RemoveConstraint(tableName string, constraintName string) error {
+	_, err := s.db.Exec(fmt.Sprintf("ALTER TABLE %v DROP CONSTRAINT %v", tableName, constraintName))
+	return err
+}
+
 func (s commonDialect) HasForeignKey(tableName string, foreignKeyName string) bool {
 	return false
 }
@@ -200,4 +205,8 @@ func (commonDialect) ColumnEquality(fieldDBName, columnName string) bool {
 
 func (s commonDialect) GetTagSetting(field *StructField, key string) (val string, ok bool) {
 	return field.TagSettingsGet(key)
+}
+
+func (s commonDialect) GetByteLimit() int {
+	return -1
 }

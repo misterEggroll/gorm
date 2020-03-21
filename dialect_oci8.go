@@ -1,3 +1,5 @@
+// +build oracle
+
 package gorm
 
 import (
@@ -208,3 +210,8 @@ func (*oci8) ColumnEquality(fieldDBName, columnName string) bool {
 func (o *oci8) GetTagSetting(field *StructField, key string) (val string, ok bool) {
 	return field.TagSettingsGetFirst(strings.ToUpper(o.GetName())+" "+key, key)
 }
+
+func (o *oci8) GetByteLimit() int {
+	return 30000
+}
+
