@@ -7,7 +7,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/jinzhu/gorm"
+	"github.com/Vernacular-ai/gorm"
 )
 
 func TestBelongsTo(t *testing.T) {

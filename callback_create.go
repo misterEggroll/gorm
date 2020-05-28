@@ -177,6 +177,12 @@ func afterCreateCallback(scope *Scope) {
 		scope.Dialect().SetDB(scope.db.db)
 		primaryField := scope.PrimaryField()
 		val := primaryField.Field.Interface()
+
+		// In case the Primary key is of type gorm.Primary, using the value from that valuer to resolve a row ID
+		if primary, ok := val.(Primary); ok {
+			val = primary.ID
+		}
+
 		// Row ID cannot be 0. Obvious issue that has occurred upstream.
 		if arg, ok := val.(uint); ok && arg != 0{
 			scope.Err(primaryField.Set(scope.Dialect().ResolveRowID(scope.TableName(), arg)))

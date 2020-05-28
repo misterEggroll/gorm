@@ -1,3 +1,5 @@
+// +build oracle
+
 package gorm
 
 import (
@@ -152,7 +154,7 @@ func (o *oci8) ResolveRowID(tableName string, rowID uint) uint{
 	query := fmt.Sprintf(`SELECT id FROM %s WHERE rowid = :2`, o.Quote(tableName))
 	var err error
 	if err = o.db.QueryRow(query, strRowID).Scan(&id); err == nil{
-		if res, err := strconv.ParseUint(id, 10, 32); err == nil{
+		if res, err := strconv.ParseUint(id, 10, 64); err == nil{
 			resolvedId := uint(res)
 			return resolvedId
 		}
@@ -208,3 +210,8 @@ func (*oci8) ColumnEquality(fieldDBName, columnName string) bool {
 func (o *oci8) GetTagSetting(field *StructField, key string) (val string, ok bool) {
 	return field.TagSettingsGetFirst(strings.ToUpper(o.GetName())+" "+key, key)
 }
+
+func (o *oci8) GetByteLimit() int {
+	return 30000
+}
+

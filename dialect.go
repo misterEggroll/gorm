@@ -29,6 +29,8 @@ type Dialect interface {
 	HasForeignKey(tableName string, foreignKeyName string) bool
 	// RemoveIndex remove index
 	RemoveIndex(tableName string, indexName string) error
+	// Remove constraint from a column in the DB
+	RemoveConstraint(tableName string, constraintName string) error
 	// HasTable check has table or not
 	HasTable(tableName string) bool
 	// HasColumn check has column or not
@@ -66,6 +68,8 @@ type Dialect interface {
 
 	// Determing the tag setting based on the dialect being used
 	GetTagSetting(field *StructField, key string) (string, bool)
+	// Determine the limit of byte size for a BLOB
+	GetByteLimit() int
 }
 
 var dialectsMap = map[string]Dialect{}
