@@ -1299,7 +1299,11 @@ func (scope *Scope) removeForeignKey(field string, dest string) {
 }
 
 func (scope *Scope) removeIndex(indexName string) {
-	scope.Dialect().RemoveIndex(scope.TableName(), indexName)
+	scope.db.AddError(scope.Dialect().RemoveIndex(scope.TableName(), indexName))
+}
+
+func (scope *Scope) removeConstraint(constraintName string) {
+	scope.db.AddError(scope.Dialect().RemoveConstraint(scope.TableName(), constraintName))
 }
 
 func (scope *Scope) autoMigrate() *Scope {
