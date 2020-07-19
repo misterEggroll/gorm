@@ -21,6 +21,15 @@ func (sqlite3) GetName() string {
 
 // Get Data Type for Sqlite Dialect
 func (s *sqlite3) DataTypeOf(field *StructField) string {
+	var sqlType, additionalType = s.SplitDataTypeOf(field)
+
+	if strings.TrimSpace(additionalType) == "" {
+		return sqlType
+	}
+	return fmt.Sprintf("%v %v", sqlType, additionalType)
+}
+
+func (s *sqlite3) SplitDataTypeOf(field *StructField) (string,string) {
 	var dataValue, sqlType, size, additionalType = ParseFieldStructForDialect(field, s)
 
 	if sqlType == "" {
@@ -64,10 +73,7 @@ func (s *sqlite3) DataTypeOf(field *StructField) string {
 		panic(fmt.Sprintf("invalid sql type %s (%s) for sqlite3", dataValue.Type().Name(), dataValue.Kind().String()))
 	}
 
-	if strings.TrimSpace(additionalType) == "" {
-		return sqlType
-	}
-	return fmt.Sprintf("%v %v", sqlType, additionalType)
+	return sqlType, additionalType
 }
 
 func (s sqlite3) HasIndex(tableName string, indexName string) bool {

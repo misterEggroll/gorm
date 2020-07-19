@@ -1,3 +1,5 @@
+// +build oracle
+
 package gorm
 
 import (
@@ -38,11 +40,20 @@ func (*oci8) BindVar(i int) string {
 }
 
 func (o *oci8) DataTypeOf(field *StructField) string {
+	var sqlType, additionalType = o.SplitDataTypeOf(field)
+
+	if len(strings.TrimSpace(additionalType)) == 0 {
+		return sqlType
+	}
+	return fmt.Sprintf("%v %v", sqlType, additionalType)
+}
+
+func (o *oci8) SplitDataTypeOf(field *StructField) (string, string) {
 	var dataValue, sqlType, size, additionalType = ParseFieldStructForDialect(field, o)
 
-	charset, _ := o.GetTagSetting(field,"CHARSET")
+	charset, _ := o.GetTagSetting(field, "CHARSET")
 	var strDataType string
-	if strings.EqualFold(charset,"utf-8"){
+	if strings.EqualFold(charset, "utf-8") {
 		strDataType = "NVARCHAR2"
 	} else {
 		strDataType = "VARCHAR2"
@@ -88,7 +99,7 @@ func (o *oci8) DataTypeOf(field *StructField) string {
 			}
 		}
 
-	} else if isUUID(dataValue){
+	} else if isUUID(dataValue) {
 		// In case the user has specified uuid as the type explicitly
 		sqlType = fmt.Sprintf("%s(36)", strDataType)
 	}
@@ -97,10 +108,7 @@ func (o *oci8) DataTypeOf(field *StructField) string {
 		panic(fmt.Sprintf("invalid sql type %s (%s) for oci8", dataValue.Type().Name(), dataValue.Kind().String()))
 	}
 
-	if len(strings.TrimSpace(additionalType)) == 0 {
-		return sqlType
-	}
-	return fmt.Sprintf("%v %v", sqlType, additionalType)
+	return sqlType, additionalType
 }
 
 func (o *oci8) HasIndex(tableName string, indexName string) bool {
@@ -127,6 +135,10 @@ func (o *oci8) HasColumn(tableName string, columnName string) bool {
 	return count > 0
 }
 
+func (s *oci8) DropNullable(tableName string, columnName string, colType string) error {
+	_, err := s.db.Exec(fmt.Sprintf("ALTER TABLE %v MODIFY %v %v NULL", tableName, columnName, colType))
+	return err
+}
 
 func (*oci8) buildSha(str string) string {
 	if utf8.RuneCountInString(str) <= 30 {
@@ -146,29 +158,29 @@ func (*oci8) buildSha(str string) string {
 
 // Returns the primary key via the row ID
 // Assumes that the primary key is the ID of the table
-func (o *oci8) ResolveRowID(tableName string, rowID uint) uint{
+func (o *oci8) ResolveRowID(tableName string, rowID uint) uint {
 	strRowID := ociDriver.GetLastInsertId(int64(rowID))
-	var id string
+	var id float64
 	query := fmt.Sprintf(`SELECT id FROM %s WHERE rowid = :2`, o.Quote(tableName))
 	var err error
-	if err = o.db.QueryRow(query, strRowID).Scan(&id); err == nil{
-		if res, err := strconv.ParseUint(id, 10, 32); err == nil{
-			resolvedId := uint(res)
-			return resolvedId
-		}
+	if err = o.db.QueryRow(query, strRowID).Scan(&id); err == nil {
+		return uint(id)
+	} else {
+		defaultLogger.Print(fmt.Sprintf("[warning][oci8] Unable to fetch ID for rowID %v: %v\n", strRowID, err))
 	}
+
 	return rowID
 }
 
 // Client statement separator used to terminate the statement
-func (*oci8) ClientStatementSeparator() string{
+func (*oci8) ClientStatementSeparator() string {
 	// In case of most DB's, it's a semicolon
 	return ""
 }
 
 func (*oci8) LimitAndOffsetSQL(limit, offset interface{}) (sql string) {
 	// In case both limit and offset are nil, simply return and empty string
-	if offset == nil && limit == nil{
+	if offset == nil && limit == nil {
 		return ""
 	}
 
@@ -191,7 +203,7 @@ func (*oci8) LimitAndOffsetSQL(limit, offset interface{}) (sql string) {
 	}
 
 	// Limit clause comes later
-	if  errLimitParse == nil && parsedLimit >= 0 {
+	if errLimitParse == nil && parsedLimit >= 0 {
 		sql += fmt.Sprintf(" ROWS FETCH NEXT %d ROWS ONLY", parsedLimit)
 	}
 	return
@@ -207,4 +219,8 @@ func (*oci8) ColumnEquality(fieldDBName, columnName string) bool {
 // Then check if there is a generic setting
 func (o *oci8) GetTagSetting(field *StructField, key string) (val string, ok bool) {
 	return field.TagSettingsGetFirst(strings.ToUpper(o.GetName())+" "+key, key)
+}
+
+func (o *oci8) GetByteLimit() int {
+	return 30000
 }
