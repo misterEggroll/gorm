@@ -31,6 +31,15 @@ func (mysql) Quote(key string) string {
 
 // Get Data Type for MySQL Dialect
 func (s *mysql) DataTypeOf(field *StructField) string {
+	var sqlType, additionalType = s.SplitDataTypeOf(field)
+
+	if strings.TrimSpace(additionalType) == "" {
+		return sqlType
+	}
+	return fmt.Sprintf("%v %v", sqlType, additionalType)
+}
+
+func (s *mysql) SplitDataTypeOf(field *StructField) (string, string) {
 	var dataValue, sqlType, size, additionalType = ParseFieldStructForDialect(field, s)
 
 	// MySQL allows only one auto increment column per table, and it must
@@ -110,27 +119,35 @@ func (s *mysql) DataTypeOf(field *StructField) string {
 			}
 		default:
 			if IsByteArrayOrSlice(dataValue) {
-				if size > 0 && size < 65532 {
+				if isJSON(dataValue) {
+					// Adding a constraint to see ensure that the value is a well formed JSON
+					sqlType = "json"
+				} else if size > 0 && size < 65532 {
 					sqlType = fmt.Sprintf("varbinary(%d)", size)
 				} else {
 					sqlType = "longblob"
 				}
 			}
 		}
+	} else if isUUID(dataValue) {
+		// In case the user has specified uuid as the type explicitly
+		sqlType = "varchar(36)"
 	}
 
 	if sqlType == "" {
 		panic(fmt.Sprintf("invalid sql type %s (%s) for mysql", dataValue.Type().Name(), dataValue.Kind().String()))
 	}
 
-	if strings.TrimSpace(additionalType) == "" {
-		return sqlType
-	}
-	return fmt.Sprintf("%v %v", sqlType, additionalType)
+	return sqlType, additionalType
 }
 
 func (s mysql) RemoveIndex(tableName string, indexName string) error {
 	_, err := s.db.Exec(fmt.Sprintf("DROP INDEX %v ON %v", indexName, s.Quote(tableName)))
+	return err
+}
+
+func (s mysql) RemoveConstraint(tableName string, constraintName string) error {
+	_, err := s.db.Exec(fmt.Sprintf("ALTER TABLE %v DROP INDEX %v", tableName, constraintName))
 	return err
 }
 

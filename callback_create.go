@@ -176,10 +176,9 @@ func afterCreateCallback(scope *Scope) {
 		// Currently does not support composite primary keys
 		scope.Dialect().SetDB(scope.db.db)
 		primaryField := scope.PrimaryField()
-		val := primaryField.Field.Interface()
 		// Row ID cannot be 0. Obvious issue that has occurred upstream.
-		if arg, ok := val.(uint); ok && arg != 0{
-			scope.Err(primaryField.Set(scope.Dialect().ResolveRowID(scope.TableName(), arg)))
+		if val := primaryField.Field.Uint(); val != 0 {
+			scope.Err(primaryField.Set(scope.Dialect().ResolveRowID(scope.TableName(), uint(val))))
 		}
 	}
 }

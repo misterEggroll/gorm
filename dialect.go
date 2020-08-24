@@ -22,6 +22,8 @@ type Dialect interface {
 	Quote(key string) string
 	// DataTypeOf return data's sql type
 	DataTypeOf(field *StructField) string
+	// SplitDataTypeOf returns data's sql type and it's additional type
+	SplitDataTypeOf(field *StructField) (string, string)
 
 	// HasIndex check has index or not
 	HasIndex(tableName string, indexName string) bool
@@ -29,12 +31,16 @@ type Dialect interface {
 	HasForeignKey(tableName string, foreignKeyName string) bool
 	// RemoveIndex remove index
 	RemoveIndex(tableName string, indexName string) error
+	// Remove constraint from a column in the DB
+	RemoveConstraint(tableName string, constraintName string) error
 	// HasTable check has table or not
 	HasTable(tableName string) bool
 	// HasColumn check has column or not
 	HasColumn(tableName string, columnName string) bool
 	// ModifyColumn modify column's type
 	ModifyColumn(tableName string, columnName string, typ string) error
+	// Nullable sets column's null constraint
+	DropNullable(tableName string, columnName string, colType string) error
 
 	// LimitAndOffsetSQL return generated SQL with Limit and Offset, as mssql has special case
 	LimitAndOffsetSQL(limit, offset interface{}) string
@@ -66,6 +72,8 @@ type Dialect interface {
 
 	// Determing the tag setting based on the dialect being used
 	GetTagSetting(field *StructField, key string) (string, bool)
+	// Determine the limit of byte size for a BLOB
+	GetByteLimit() int
 }
 
 var dialectsMap = map[string]Dialect{}

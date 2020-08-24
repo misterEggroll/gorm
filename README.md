@@ -30,6 +30,19 @@ The fantastic ORM library for Golang, aims to be developer friendly.
 
 * GORM Guides [https://gorm.io](https://gorm.io)
 
+## Oracle Support
+Oracle support is made optional.
+
+Since oracle drivers initialize at start, a build flag has been added to enable oracle sdk.
+Example:
+```shell
+go build -tags oracle ./...
+```
+or running main during development
+```shell
+go run -tags oracle main.go
+```
+
 ## Contributing
 
 [You can help to deliver a better GORM, check out things you can do](https://gorm.io/contribute.html)
