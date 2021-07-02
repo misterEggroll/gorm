@@ -51,10 +51,10 @@ const (
 //       db, err := gorm.Open("mysql", "user:password@/dbname?charset=utf8&parseTime=True&loc=Local")
 //     }
 // GORM has wrapped some drivers, for easier to remember driver's import path, so you could import the mysql driver with
-//    import _ "github.com/jinzhu/gorm/dialects/mysql"
-//    // import _ "github.com/jinzhu/gorm/dialects/postgres"
-//    // import _ "github.com/jinzhu/gorm/dialects/sqlite"
-//    // import _ "github.com/jinzhu/gorm/dialects/mssql"
+//    import _ "github.com/Vernacular-ai/gorm/dialects/mysql"
+//    // import _ "github.com/Vernacular-ai/gorm/dialects/postgres"
+//    // import _ "github.com/Vernacular-ai/gorm/dialects/sqlite"
+//    // import _ "github.com/Vernacular-ai/gorm/dialects/mssql"
 func Open(dialect string, args ...interface{}) (db *DB, err error) {
 	if len(args) == 0 {
 		err = errors.New("invalid database source")
@@ -438,6 +438,15 @@ func (s *DB) Update(attrs ...interface{}) *DB {
 	return s.Updates(toSearchableMap(attrs...), true)
 }
 
+// Increments integer attributes with the values set in the interface passed
+func (s *DB) Increment(values interface{}, ignoreProtectedAttrs ...bool) *DB {
+	return s.NewScope(values).
+		Set("gorm:ignore_protected_attrs", len(ignoreProtectedAttrs) > 0).
+		InstanceSet("gorm:update_interface", values).
+		InstanceSet("gorm:increment_attrs", values).
+		callCallbacks(s.parent.callbacks.updates).db
+}
+
 // Updates update attributes with callbacks, refer: https://jinzhu.github.io/gorm/crud.html#update
 func (s *DB) Updates(values interface{}, ignoreProtectedAttrs ...bool) *DB {
 	return s.NewScope(s.Value).
@@ -666,6 +675,13 @@ func (s *DB) ModifyColumn(column string, typ string) *DB {
 	return scope.db
 }
 
+// Nullable sets column's null constraint
+func (s *DB) DropNullable(column string) *DB {
+	scope := s.NewScope(s.Value)
+	scope.dropNullable(column)
+	return scope.db
+}
+
 // DropColumn drop a column
 func (s *DB) DropColumn(column string) *DB {
 	scope := s.NewScope(s.Value)
@@ -691,6 +707,13 @@ func (s *DB) AddUniqueIndex(indexName string, columns ...string) *DB {
 func (s *DB) RemoveIndex(indexName string) *DB {
 	scope := s.NewScope(s.Value)
 	scope.removeIndex(indexName)
+	return scope.db
+}
+
+// RemoveIndex remove constraint with name
+func (s *DB) RemoveConstraint(constraintName string) *DB {
+	scope := s.NewScope(s.Value)
+	scope.removeConstraint(constraintName)
 	return scope.db
 }
 
