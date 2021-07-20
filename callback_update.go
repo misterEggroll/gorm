@@ -3,6 +3,7 @@ package gorm
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 )
@@ -59,7 +60,8 @@ func updateCallback(scope *Scope) {
 	if !scope.HasError() {
 		var sqls []string
 
-		if updateAttrs, ok := scope.InstanceGet("gorm:update_attrs"); ok {
+		_, increment := scope.InstanceGet("gorm:increment_attrs")
+		if updateAttrs, ok := scope.InstanceGet("gorm:update_attrs"); ok && !increment {
 			// Sort the column names so that the generated SQL is the same every time.
 			updateMap := updateAttrs.(map[string]interface{})
 			var columns []string
@@ -75,15 +77,32 @@ func updateCallback(scope *Scope) {
 		} else {
 			for _, field := range scope.Fields() {
 				if scope.changeableField(field) {
-					if !field.IsPrimaryKey && field.IsNormal && (field.Name != "CreatedAt" || !field.IsBlank) {
-						if !field.IsForeignKey || !field.IsBlank || !field.HasDefaultValue {
-							sqls = append(sqls, fmt.Sprintf("%v = %v", scope.Quote(field.DBName), scope.AddToVars(field.Field.Interface())))
+					if increment {
+						// Use increment logic
+						if !field.IsPrimaryKey && field.IsNormal && (field.Name != "CreatedAt" || !field.IsBlank) && !field.IsForeignKey {
+							// Only incrementing uint columns which are not Pkey or Fkey
+							if (!field.IsForeignKey || !field.IsBlank || !field.HasDefaultValue) && (field.Field.Kind() == reflect.Uint || field.Field.Kind() == reflect.Float64|| field.Field.Kind() == reflect.Float32) {
+								sqls = append(sqls, fmt.Sprintf("%v = %v + %s ", scope.Quote(field.DBName), scope.Quote(field.DBName), scope.AddToVars(field.Field.Interface())))
+							}
+						} else if relationship := field.Relationship; relationship != nil && relationship.Kind == "belongs_to" {
+							for _, foreignKey := range relationship.ForeignDBNames {
+								if foreignField, ok := scope.FieldByName(foreignKey); ok && !scope.changeableField(foreignField) && (foreignField.Field.Kind() == reflect.Uint || foreignField.Field.Kind() == reflect.Float32 || foreignField.Field.Kind() == reflect.Float64) {
+									sqls = append(sqls,
+										fmt.Sprintf("%v = %v + %s", scope.Quote(foreignField.DBName), scope.Quote(foreignField.DBName), scope.AddToVars(foreignField.Field.Uint())))
+								}
+							}
 						}
-					} else if relationship := field.Relationship; relationship != nil && relationship.Kind == "belongs_to" {
-						for _, foreignKey := range relationship.ForeignDBNames {
-							if foreignField, ok := scope.FieldByName(foreignKey); ok && !scope.changeableField(foreignField) {
-								sqls = append(sqls,
-									fmt.Sprintf("%v = %v", scope.Quote(foreignField.DBName), scope.AddToVars(foreignField.Field.Interface())))
+					} else {
+						if !field.IsPrimaryKey && field.IsNormal && (field.Name != "CreatedAt" || !field.IsBlank) {
+							if !field.IsForeignKey || !field.IsBlank || !field.HasDefaultValue {
+								sqls = append(sqls, fmt.Sprintf("%v = %v", scope.Quote(field.DBName), scope.AddToVars(field.Field.Interface())))
+							}
+						} else if relationship := field.Relationship; relationship != nil && relationship.Kind == "belongs_to" {
+							for _, foreignKey := range relationship.ForeignDBNames {
+								if foreignField, ok := scope.FieldByName(foreignKey); ok && !scope.changeableField(foreignField) {
+									sqls = append(sqls,
+										fmt.Sprintf("%v = %v", scope.Quote(foreignField.DBName), scope.AddToVars(foreignField.Field.Interface())))
+								}
 							}
 						}
 					}

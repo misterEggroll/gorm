@@ -19,11 +19,11 @@ import (
 	"time"
 
 	"github.com/erikstmartin/go-testdb"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mssql"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"github.com/Vernacular-ai/gorm"
+	_ "github.com/Vernacular-ai/gorm/dialects/mssql"
+	_ "github.com/Vernacular-ai/gorm/dialects/mysql"
+	"github.com/Vernacular-ai/gorm/dialects/postgres"
+	_ "github.com/Vernacular-ai/gorm/dialects/sqlite"
 	"github.com/jinzhu/now"
 )
 

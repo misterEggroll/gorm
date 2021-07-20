@@ -65,7 +65,11 @@ func createCallback(scope *Scope) {
 						scope.InstanceSet("gorm:blank_columns_with_default_value", blankColumnsWithDefaultValue)
 					} else if !field.IsPrimaryKey || !field.IsBlank {
 						columns = append(columns, scope.Quote(field.DBName))
-						placeholders = append(placeholders, scope.AddToVars(field.Field.Interface()))
+						if field.Struct.Type.String() == "vorm.Foreign" && isBlank(field.Field) {
+							placeholders = append(placeholders, scope.AddToVars(nil))
+						} else {
+							placeholders = append(placeholders, scope.AddToVars(field.Field.Interface()))
+						}
 					}
 				} else if field.Relationship != nil && field.Relationship.Kind == "belongs_to" {
 					for _, foreignKey := range field.Relationship.ForeignDBNames {
@@ -176,10 +180,9 @@ func afterCreateCallback(scope *Scope) {
 		// Currently does not support composite primary keys
 		scope.Dialect().SetDB(scope.db.db)
 		primaryField := scope.PrimaryField()
-		val := primaryField.Field.Interface()
 		// Row ID cannot be 0. Obvious issue that has occurred upstream.
-		if arg, ok := val.(uint); ok && arg != 0{
-			scope.Err(primaryField.Set(scope.Dialect().ResolveRowID(scope.TableName(), arg)))
+		if val := primaryField.Field.Uint(); val != 0 {
+			scope.Err(primaryField.Set(scope.Dialect().ResolveRowID(scope.TableName(), uint(val))))
 		}
 	}
 }

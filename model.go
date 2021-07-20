@@ -1,6 +1,8 @@
 package gorm
 
-import "time"
+import (
+	"time"
+)
 
 // Model base model definition, including fields `ID`, `CreatedAt`, `UpdatedAt`, `DeletedAt`, which could be embedded in your models
 //    type User struct {
@@ -12,3 +14,4 @@ type Model struct {
 	UpdatedAt time.Time
 	DeletedAt *time.Time `sql:"index"`
 }
+

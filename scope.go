@@ -1223,6 +1223,15 @@ func (scope *Scope) modifyColumn(column string, typ string) {
 	scope.db.AddError(scope.Dialect().ModifyColumn(scope.QuotedTableName(), scope.Quote(column), typ))
 }
 
+func (scope *Scope) dropNullable(column string) {
+	colField, ok := scope.FieldByName(column)
+	if !ok {
+		scope.db.AddError(errors.New("No such column found"))
+	}
+	colType, _ := scope.Dialect().SplitDataTypeOf(colField.StructField)
+	scope.db.AddError(scope.Dialect().DropNullable(scope.QuotedTableName(), scope.Quote(column), colType))
+}
+
 func (scope *Scope) dropColumn(column string) {
 	scope.Raw(fmt.Sprintf("ALTER TABLE %v DROP COLUMN %v", scope.QuotedTableName(), scope.Quote(column))).Exec()
 }
@@ -1299,7 +1308,11 @@ func (scope *Scope) removeForeignKey(field string, dest string) {
 }
 
 func (scope *Scope) removeIndex(indexName string) {
-	scope.Dialect().RemoveIndex(scope.TableName(), indexName)
+	scope.db.AddError(scope.Dialect().RemoveIndex(scope.TableName(), indexName))
+}
+
+func (scope *Scope) removeConstraint(constraintName string) {
+	scope.db.AddError(scope.Dialect().RemoveConstraint(scope.TableName(), constraintName))
 }
 
 func (scope *Scope) autoMigrate() *Scope {

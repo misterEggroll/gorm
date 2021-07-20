@@ -48,6 +48,15 @@ func (s *commonDialect) fieldCanAutoIncrement(field *StructField) bool {
 }
 
 func (s *commonDialect) DataTypeOf(field *StructField) string {
+	var sqlType, additionalType = s.SplitDataTypeOf(field)
+
+	if strings.TrimSpace(additionalType) == "" {
+		return sqlType
+	}
+	return fmt.Sprintf("%v %v", sqlType, additionalType)
+}
+
+func (s *commonDialect) SplitDataTypeOf(field *StructField) (string, string) {
 	var dataValue, sqlType, size, additionalType = ParseFieldStructForDialect(field, s)
 
 	if sqlType == "" {
@@ -93,10 +102,7 @@ func (s *commonDialect) DataTypeOf(field *StructField) string {
 		panic(fmt.Sprintf("invalid sql type %s (%s) for commonDialect", dataValue.Type().Name(), dataValue.Kind().String()))
 	}
 
-	if strings.TrimSpace(additionalType) == "" {
-		return sqlType
-	}
-	return fmt.Sprintf("%v %v", sqlType, additionalType)
+	return sqlType, additionalType
 }
 
 func (s commonDialect) HasIndex(tableName string, indexName string) bool {
@@ -108,6 +114,11 @@ func (s commonDialect) HasIndex(tableName string, indexName string) bool {
 
 func (s commonDialect) RemoveIndex(tableName string, indexName string) error {
 	_, err := s.db.Exec(fmt.Sprintf("DROP INDEX %v", indexName))
+	return err
+}
+
+func (s commonDialect) RemoveConstraint(tableName string, constraintName string) error {
+	_, err := s.db.Exec(fmt.Sprintf("ALTER TABLE %v DROP CONSTRAINT %v", tableName, constraintName))
 	return err
 }
 
@@ -131,6 +142,11 @@ func (s commonDialect) HasColumn(tableName string, columnName string) bool {
 
 func (s commonDialect) ModifyColumn(tableName string, columnName string, typ string) error {
 	_, err := s.db.Exec(fmt.Sprintf("ALTER TABLE %v ALTER COLUMN %v TYPE %v", tableName, columnName, typ))
+	return err
+}
+
+func (s commonDialect) DropNullable(tableName string, columnName string, colType string) error {
+	_, err := s.db.Exec(fmt.Sprintf("ALTER TABLE %v MODIFY %v %v NULL", tableName, columnName, colType))
 	return err
 }
 
@@ -200,4 +216,8 @@ func (commonDialect) ColumnEquality(fieldDBName, columnName string) bool {
 
 func (s commonDialect) GetTagSetting(field *StructField, key string) (val string, ok bool) {
 	return field.TagSettingsGet(key)
+}
+
+func (s commonDialect) GetByteLimit() int {
+	return -1
 }
